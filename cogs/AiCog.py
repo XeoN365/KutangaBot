@@ -4,7 +4,6 @@ import aiohttp
 import json
 import math
 import re
-from discord.utils import get
 from managers.logging import Logger
 from utils.reaction import Reaction
 from motor.motor_asyncio import AsyncIOMotorDatabase
@@ -41,7 +40,10 @@ class AiCog(commands.Cog):
     @commands.command()
     async def reset_context(self, ctx: commands.Context):
         await self.append_context(userid=ctx.author.id, context=[])
-        await ctx.send(f"Context for {ctx.author.display_name} has been reset.")
+        embed = self.reaction.create_embed(
+            f"Context for {ctx.author.name} has been reset"
+        )
+        await ctx.send(embed=embed)
 
     @commands.command(name="question", description="Ask a question")
     async def ask_question(self, ctx: commands.Context, *, question: str):
