@@ -2,7 +2,6 @@ from motor.motor_asyncio import AsyncIOMotorClient
 from dotenv import load_dotenv
 import os
 from managers.logging import Logger
-import asyncio
 
 load_dotenv()
 
