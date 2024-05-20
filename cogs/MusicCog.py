@@ -1,10 +1,9 @@
 import discord
 from discord.ext import commands
 import wavelink
-from typing import Optional, cast
+from typing import cast
 from managers.logging import Logger
 from utils.embed import Embed
-import datetime
 from utils.reaction import Reaction
 
 

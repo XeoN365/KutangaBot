@@ -1,9 +1,8 @@
 from discord.ext import commands, tasks
 from motor.motor_asyncio import AsyncIOMotorDatabase
 from typing import Optional
-from datetime import datetime, timedelta
+from datetime import datetime
 from utils.embed import Embed
-import discord
 
 
 class ReminderCog(commands.Cog):

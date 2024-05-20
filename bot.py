@@ -1,10 +1,7 @@
 import discord
 from discord.ext import commands
-from discord import app_commands
-import logging
 import os
 from dotenv import load_dotenv
-import asyncio
 from managers.database import Database
 from managers.logging import Logger
 import wavelink

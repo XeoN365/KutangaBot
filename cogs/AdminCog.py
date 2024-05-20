@@ -1,5 +1,4 @@
 from discord.ext import commands
-import discord
 from async_eval import eval as aeval
 
 
