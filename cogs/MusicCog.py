@@ -86,6 +86,24 @@ class MusicCog(commands.Cog):
         await ctx.send(embed=embed)
 
     @commands.command()
+    async def nowplaying(self, ctx: commands.Context):
+        player: wavelink.Player = cast(wavelink.Player, ctx.voice_client)
+        if not player:
+            return
+        queue: wavelink.Queue = player.queue or player.auto_queue
+        if not queue:
+            return
+        track: wavelink.Playable | None = player.current
+        embed = self.embed.create_embed(
+            f"**{track.title}** by '{track.author}'", "Now Playing"
+        )
+        if track.artwork:
+            embed.set_image(url=track.artwork)
+        if track.album.name:
+            embed.add_field(name="Album", value=track.album.name, inline=False)
+        await ctx.send(embed=embed)
+
+    @commands.command()
     async def repeat(self, ctx: commands.Context, mode: str):
         if mode.lower() not in ("song", "queue", "off"):
             await self.logger.error(
