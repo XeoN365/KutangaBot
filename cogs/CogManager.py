@@ -44,13 +44,15 @@ class CogManager(commands.Cog):
     @commands.is_owner()
     async def reload_cog(self, ctx: commands.Context, *, cog_name: str):
         if cog_name.lower() == "all":
-            cogs = self.bot.cogs
+            cogs = [key for key in self.bot.cogs.keys()]
             done = []
             for cog in cogs:
                 if cog not in done and cog != "CogManager":
                     await self.bot.reload_extension(f"cogs.{cog}")
-                    await self.bot.logger.log(ctx=ctx, message=f"Reloaded {cog}")
                     done.append(cog)
+            await self.bot.logger.log(
+                ctx=ctx, message=f"Reloaded cogs: {', '.join(done)}"
+            )
         else:
             await self.bot.reload_extension(f"cogs.{cog_name}")
             await self.bot.logger.log(ctx=ctx, message=f"Reloaded {cog_name}")
