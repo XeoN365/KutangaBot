@@ -53,6 +53,7 @@ class MusicCog(commands.Cog):
 
     @commands.group(name="music", invoke_without_command=True)
     async def music(self, ctx: commands.Context):
+        """Shows the music commands"""
         await ctx.send_help(self.music)
 
     @music.command(name="queue", aliases=["q"])

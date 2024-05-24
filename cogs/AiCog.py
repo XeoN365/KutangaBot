@@ -39,6 +39,7 @@ class AiCog(commands.Cog):
 
     @commands.command()
     async def reset_context(self, ctx: commands.Context):
+        """Reset the context for a user."""
         await self.append_context(userid=ctx.author.id, context=[])
         embed = self.reaction.create_embed(
             f"Context for {ctx.author.name} has been reset"
@@ -47,6 +48,7 @@ class AiCog(commands.Cog):
 
     @commands.command(name="question", description="Ask a question")
     async def ask_question(self, ctx: commands.Context, *, question: str):
+        """Ask a question to the LLM."""
         pattern = re.compile(r"<@[0-9]+>")
         context = list()
         if pattern.search(question):

@@ -25,6 +25,7 @@ class CogManager(commands.Cog):
     @commands.group(name="cog", invoke_without_command=True)
     @commands.is_owner()
     async def cog(self, ctx: commands.Context):
+        """Cog management commands"""
         await ctx.send_help(self.cog)
 
     @cog.command("load", description="Load a cog")
