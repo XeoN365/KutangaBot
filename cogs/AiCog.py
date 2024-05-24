@@ -6,22 +6,22 @@ import math
 import re
 from managers.logging import Logger
 from utils.reaction import Reaction
-from motor.motor_asyncio import AsyncIOMotorDatabase
+from motor.motor_asyncio import AsyncIOMotorDatabase, AsyncIOMotorCollection
 from datetime import datetime, timedelta
 import os
 
 
 class AiCog(commands.Cog):
     def __init__(self, bot: commands.Bot):
-        self.bot: commands.Bot = bot
+        self.bot = bot
         self.logger: Logger = self.bot.logger
         self.reaction: Reaction = Reaction()
         self.db: AsyncIOMotorDatabase = self.bot.db["AiContext"]
 
-    async def check_for_context(self, userid):
+    async def check_for_context(self, userid: int) -> AsyncIOMotorCollection:
         return await self.db.find_one({"userid": userid})
 
-    async def append_context(self, userid, context):
+    async def append_context(self, userid: int, context):
         date = datetime.now()
         check = await self.check_for_context(userid=userid)
         if check is not None:
@@ -74,7 +74,7 @@ class AiCog(commands.Cog):
         }
         data = json.dumps(data)
         url = os.getenv("LLM_API_URL")
-        response = await make_post_request(url, data)
+        response = await make_async_post_request(url, data)
         pages = math.ceil(len(response["response"]) / 1024)
         if pages == 1:
             await ctx.send(response["response"], ephemeral=True)
@@ -96,7 +96,7 @@ class AiCog(commands.Cog):
             await self.ask_question(ctx, question=content)
 
 
-async def make_post_request(url, data):
+async def make_async_post_request(url, data):
     async with aiohttp.ClientSession() as session:
         async with session.post(url=url, data=data) as response:
             return await response.json()

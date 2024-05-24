@@ -51,8 +51,13 @@ class MusicCog(commands.Cog):
         await player.home.send(embed=embed)
         await player.disconnect()
 
-    @commands.command(name="queue", aliases=["q"])
+    @commands.group(name="music", invoke_without_command=True)
+    async def music(self, ctx: commands.Context):
+        await ctx.send_help(self.music)
+
+    @music.command(name="queue", aliases=["q"])
     async def queue(self, ctx: commands.Context):
+        """Shows the queue"""
         player: wavelink.Player = cast(wavelink.Player, ctx.voice_client)
         if not player:
             return
@@ -66,7 +71,7 @@ class MusicCog(commands.Cog):
                 hours, reminders = divmod(track.length / 1000, 3600)
                 minutes, seconds = divmod(reminders, 60)
                 title = (
-                    track.title if len(track.title) < 30 else f"{track.title[:30]}..."
+                    track.title if len(track.title) < 50 else f"{track.title[:50]}..."
                 )
                 songs += f"{id+1}. **{title}** by **'{track.author}'** {int(minutes)}:{int(seconds)}\n"
             time += track.length
@@ -85,13 +90,11 @@ class MusicCog(commands.Cog):
         embed.set_footer(text=f"Total: {len(queue)} | Total play time: {text}")
         await ctx.send(embed=embed)
 
-    @commands.command()
+    @music.command(name="nowplaying", aliases=["np"])
     async def nowplaying(self, ctx: commands.Context):
+        """Shows the currently playing song"""
         player: wavelink.Player = cast(wavelink.Player, ctx.voice_client)
         if not player:
-            return
-        queue: wavelink.Queue = player.queue or player.auto_queue
-        if not queue:
             return
         track: wavelink.Playable | None = player.current
         embed = self.embed.create_embed(
@@ -103,8 +106,9 @@ class MusicCog(commands.Cog):
             embed.add_field(name="Album", value=track.album.name, inline=False)
         await ctx.send(embed=embed)
 
-    @commands.command()
+    @music.command(name="repeat", aliases=["r"])
     async def repeat(self, ctx: commands.Context, mode: str):
+        """Sets the repeat mode of the queue. Usage: repeat <song/queue/off>"""
         if mode.lower() not in ("song", "queue", "off"):
             await self.logger.error(
                 ctx,
@@ -131,29 +135,30 @@ class MusicCog(commands.Cog):
             embed = self.embed.create_embed("Repeat mode is now off!", "Music Player")
             await ctx.send(embed=embed)
 
-    @commands.command(name="autoplay")
+    @music.command(name="autoplay", aliases=["ap"])
     async def autoplay(self, ctx: commands.Context, mode: str):
+        """Sets the autoplay / radio mode of the queue. Usage: autoplay <on/off>"""
         if not ctx.guild:
             return
         player: wavelink.Player = cast(wavelink.Player, ctx.voice_client)
         if not player:
             return
         if mode.lower() == "on":
-            self.autoplay = wavelink.AutoPlayMode.enabled
+            player.autoplay = wavelink.AutoPlayMode.enabled
             embed = self.embed.create_embed("Autoplay is now on!", "Music Player")
             await ctx.send(embed=embed)
         elif mode.lower() == "off":
-            self.autoplay = wavelink.AutoPlayMode.partial
+            player.autoplay = wavelink.AutoPlayMode.partial
             embed = self.embed.create_embed("Autoplay is now off!", "Music Player")
             await ctx.send(embed=embed)
         else:
             await self.logger.error(
                 ctx, message=f"{ctx.author.mention} Autoplay must be on or off!"
             )
-        player.autoplay = self.autoplay
 
-    @commands.command(name="shuffle")
+    @music.command(name="shuffle")
     async def shuffle(self, ctx: commands.Context):
+        """Shuffles the queue"""
         player: wavelink.Player = cast(wavelink.Player, ctx.voice_client)
         if not player:
             return
@@ -164,8 +169,9 @@ class MusicCog(commands.Cog):
         embed = self.embed.create_embed("Queue has been shuffled!", "Music Player")
         await ctx.send(embed=embed)
 
-    @commands.command(name="play", aliases=["p"])
+    @music.command(name="play", aliases=["p"])
     async def play(self, ctx: commands.Context, *, query: str):
+        """Plays a song Usage: play <query>"""
         if not ctx.guild:
             return
 
@@ -187,7 +193,7 @@ class MusicCog(commands.Cog):
                 return
 
         player.inactive_timeout = self.timeout
-        player.autoplay = self.autoplay
+        player.autoplay = wavelink.AutoPlayMode.partial
 
         if not hasattr(player, "home"):
             player.home = ctx.channel
@@ -218,13 +224,16 @@ class MusicCog(commands.Cog):
             embed = self.embed.create_embed(
                 f"Added **{track}** to the queue", "Music Player", color="pass"
             )
+            if track.artwork:
+                embed.set_image(url=track.artwork)
             await ctx.send(embed=embed)
 
         if not player.playing:
             await player.play(player.queue.get(), volume=5)
 
-    @commands.command(name="skip")
+    @music.command(name="skip")
     async def skip(self, ctx: commands.Context):
+        """Skips the current song"""
         player: wavelink.Player = cast(wavelink.Player, ctx.voice_client)
         if not player:
             return
@@ -232,8 +241,9 @@ class MusicCog(commands.Cog):
         await player.skip(force=True)
         await self.reaction.add_reaction(ctx, self.reaction.green_tick)
 
-    @commands.command(name="toggle", aliases=["pause", "resume"])
+    @music.command(name="toggle", aliases=["pause", "resume"])
     async def pause_resume(self, ctx: commands.Context):
+        """Pauses or resumes the current song"""
         player: wavelink.Player = cast(wavelink.Player, ctx.voice_client)
         if not player:
             return
@@ -245,8 +255,9 @@ class MusicCog(commands.Cog):
         )
         await ctx.send(embed=embed)
 
-    @commands.command()
+    @music.command()
     async def volume(self, ctx: commands.Context, volume: int = 0):
+        """Sets the volume of the player. Usage: volume <0-100>"""
         player: wavelink.Player = cast(wavelink.Player, ctx.voice_client)
         if not player:
             return
@@ -264,8 +275,9 @@ class MusicCog(commands.Cog):
             )
             await ctx.send(embed=embed)
 
-    @commands.command(aliases=["dc"])
+    @music.command(aliases=["dc"])
     async def stop(self, ctx: commands.Context):
+        """Stops the player and disconnects from voice"""
         player: wavelink.Player = cast(wavelink.Player, ctx.voice_client)
         if not player:
             return
@@ -275,7 +287,7 @@ class MusicCog(commands.Cog):
     async def filters(self, ctx: commands.Context):
         """Set filters"""
         available_filters: str = "Currently available filters: \n"
-        for command in self.bot.get_cog("MusicCog").walk_commands():
+        for command in self.walk_commands():
             if command.parent is not None and command.hidden is not True:
                 available_filters += f"**{command.name}** - {command.description}\n"
         embed = self.embed.create_embed(available_filters, "Music Player")
@@ -283,7 +295,7 @@ class MusicCog(commands.Cog):
 
     @filters.command(description="Set custom filter")
     async def custom(self, ctx: commands.Context, *, attr: str):
-        """Custom filter"""
+        """Custom filter. Usage: custom <pitch:1.0> <speed:1.0> <rate:1.0>. 1.0 is 100%"""
         filters_raw = attr.split(" ")
         all_filters = {}
         applied_filters: str = ""

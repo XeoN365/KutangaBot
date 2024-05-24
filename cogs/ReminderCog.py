@@ -36,8 +36,8 @@ class ReminderCog(commands.Cog):
         name="reminders", description="List all reminders", invoke_without_command=True
     )
     async def reminders(self, ctx: commands.Context):
+        """Show all reminders for the user"""
         docs = await self.db.count_documents({"userid": ctx.author.id})
-        print(docs)
         if docs == 0:
             await self.logger.error(
                 ctx, f"No reminders found for **{ctx.author.display_name}**"
@@ -62,6 +62,7 @@ class ReminderCog(commands.Cog):
     async def add(
         self, ctx: commands.Context, date: Optional[str], time: str, *, description: str
     ):
+        """Add a reminder. Usage: reminders add <date> <time> <description>"""
         current_date = datetime.today().date()
         if date is not None:
             try:
@@ -102,6 +103,7 @@ class ReminderCog(commands.Cog):
 
     @reminders.command(name="remove", description="Remove a reminder")
     async def remove(self, ctx: commands.Context, date: str, time: Optional[str]):
+        """Remove a reminder. Usage: reminders remove <date/all> <Optional(time)>"""
         if date == "all" and time is None:
             result = await self.db.delete_many({"userid": ctx.author.id})
             if result.deleted_count > 0:

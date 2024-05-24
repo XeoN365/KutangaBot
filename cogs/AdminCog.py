@@ -1,11 +1,12 @@
 from discord.ext import commands
 from async_eval import eval as aeval
+from managers.logging import Logger
 
 
 class AdminCog(commands.Cog):
-    def __init__(self, bot):
+    def __init__(self, bot: commands.Bot):
         self.bot = bot
-        self.logger = self.bot.logger
+        self.logger: Logger = self.bot.logger
 
     @commands.command(hidden=True)
     @commands.is_owner()

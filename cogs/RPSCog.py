@@ -44,6 +44,7 @@ class RPSCog(commands.Cog):
 
     @commands.command(name="rps", description="Play rock paper scissors")
     async def rps(self, ctx: commands.Context, user: discord.Member):
+        """Play rock paper scissors with another user. Usage: rps <user>"""
         if user is not None and user != ctx.author:
             await self.reaction.add_reaction(ctx, "pass")
             await ctx.send(

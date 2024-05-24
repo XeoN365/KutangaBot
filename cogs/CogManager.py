@@ -15,11 +15,11 @@ class CogManager(commands.Cog):
                         await self.bot.logger.info(message=f"Loaded cog {f[:-3]}")
 
     @commands.Cog.listener()
-    async def on_cog_load(self, cog):
+    async def on_cog_load(self, cog: commands.Cog):
         await self.bot.logger.info(message=f"{cog.qualified_name} cog loaded")
 
     @commands.Cog.listener()
-    async def on_cog_unload(self, cog):
+    async def on_cog_unload(self, cog: commands.Cog):
         await self.bot.logger.info(message=f"{cog.qualified_name} cog unloaded")
 
     @commands.group(name="cog", invoke_without_command=True)
