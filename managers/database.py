@@ -1,9 +1,6 @@
 from motor.motor_asyncio import AsyncIOMotorClient
-from dotenv import load_dotenv
 import os
 from logging import Logger
-
-load_dotenv()
 
 
 class Database:
