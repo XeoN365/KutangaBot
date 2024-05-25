@@ -7,25 +7,25 @@ class ActivityCog(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot: commands.Bot = bot
         self.logger = self.bot.logger
-
-    @commands.Cog.listener()
-    async def on_cog_load(self):
-        await self.change_status.start()
+        self.loop = 0
+        self.change_status.start()
 
     @commands.Cog.listener()
     async def on_cog_unload(self):
         await self.change_status.cancel()
 
-    @tasks.loop(seconds=10)
+    @tasks.loop(seconds=60)
     async def change_status(self):
 
         activities = [
-            discord.Activity(type=discord.ActivityType.watching, name=f"you sleep"),
-            discord.Activity(type=discord.ActivityType.listening, name=f"n!help"),
-            discord.Activity(type=discord.ActivityType.streaming, name="pornhub"),
+            discord.Activity(type=discord.ActivityType.watching, name="you sleep"),
+            discord.Activity(type=discord.ActivityType.listening, name="n!help"),
+            discord.Activity(type=discord.ActivityType.streaming, name="with your mom"),
         ]
-        rnd = random.choice(activities)
-        await self.bot.change_presence(activity=rnd)
+        self.loop += 1
+        if self.loop >= len(activities):
+            self.loop = 0
+        await self.bot.change_presence(activity=activities[self.loop])
 
 
 async def setup(bot):
