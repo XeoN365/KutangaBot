@@ -16,7 +16,13 @@ class MusicCog(commands.Cog):
         self.timeout = 30
         self.autoplay = wavelink.AutoPlayMode.partial
 
-    @commands.group(name="music", invoke_without_command=True)
+    @commands.Cog.listener()
+    async def on_cog_load(self):
+        await self.bot.tree.sync()
+
+    @commands.hybrid_group(
+        name="music", invoke_without_command=True, with_app_command=True
+    )
     async def music(self, ctx: commands.Context):
         """Shows the music commands"""
         await ctx.send_help(self.music)
@@ -249,7 +255,7 @@ class MusicCog(commands.Cog):
             return
         await player.disconnect()
 
-    @commands.group(invoke_without_command=True)
+    @commands.hybrid_group(invoke_without_command=True, with_app_command=True)
     async def filters(self, ctx: commands.Context):
         """Set filters"""
         available_filters: str = "Currently available filters: \n"
