@@ -44,7 +44,7 @@ class KutangaBot(commands.Bot):
 
 
 async def start_fastapi():
-    fast_config = uvicorn.Config(app, host="0.0.0.0", port=8000, log_level="info")
+    fast_config = uvicorn.Config(app, host="localhost", port=8000, log_level="info")
     fast_server = uvicorn.Server(fast_config)
     await fast_server.serve()
 

@@ -27,6 +27,18 @@ class MusicCog(commands.Cog):
         """Shows the music commands"""
         await ctx.send_help(self.music)
 
+    @music.command(name="seek", aliases=["s"])
+    async def seek(self, ctx: commands.Context, time: str):
+        """Seeks to the specified time eg: n!music seek 01:30"""
+        player: wavelink.Player = cast(wavelink.Player, ctx.voice_client)
+        if not player:
+            return
+        minutes, seconds = time.split(":")
+        time_to_seek = int(minutes) * 60 + int(seconds)
+        await player.seek(time_to_seek * 1000)
+        embed = self.embed.create_embed(f"Seeked to {time}", "Music Player")
+        await ctx.send(embed=embed)
+
     @music.command(name="queue", aliases=["q"])
     async def queue(self, ctx: commands.Context):
         """Shows the queue"""
