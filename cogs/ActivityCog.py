@@ -9,6 +9,11 @@ class ActivityCog(commands.Cog):
         self.logger = self.bot.logger
         self.loop = 0
         self.change_status.start()
+        self.activities = [
+            discord.Activity(type=discord.ActivityType.watching, name="you sleep"),
+            discord.Activity(type=discord.ActivityType.listening, name="n!help"),
+            discord.Activity(type=discord.ActivityType.streaming, name="with your mom"),
+        ]
 
     @commands.Cog.listener()
     async def on_cog_unload(self):
@@ -17,15 +22,10 @@ class ActivityCog(commands.Cog):
     @tasks.loop(seconds=60)
     async def change_status(self):
 
-        activities = [
-            discord.Activity(type=discord.ActivityType.watching, name="you sleep"),
-            discord.Activity(type=discord.ActivityType.listening, name="n!help"),
-            discord.Activity(type=discord.ActivityType.streaming, name="with your mom"),
-        ]
         self.loop += 1
-        if self.loop >= len(activities):
+        if self.loop >= len(self.activities):
             self.loop = 0
-        await self.bot.change_presence(activity=activities[self.loop])
+        await self.bot.change_presence(activity=self.activities[self.loop])
 
 
 async def setup(bot):
