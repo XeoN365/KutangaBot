@@ -31,6 +31,28 @@ class KutangaBot(commands.Bot):
         await self.logger.info(message=f"Bot ID: {self.user.id}")
         await self.tree.sync()
 
+    async def fetch_user_command_blacklist(self, user_id: int):
+        docs = await self.users.find_one({"user_id": user_id})
+        if docs:
+            return docs.get("command_blacklist", [])
+        return []
+
+    async def fetch_guild_command_blacklist(self, guild_id: int):
+        docs = await self.guilds.find_one({"guild_id": guild_id})
+        if docs:
+            return docs.get("command_blacklist", [])
+        return []
+
+    @commands.check
+    async def allowed_command(self, ctx):
+        user_id = ctx.author.id
+        guild_id = ctx.guild.id
+        user_blacklist = await self.fetch_user_command_blacklist(user_id)
+        guild_blacklist = await self.fetch_guild_command_blacklist(guild_id)
+        if ctx.command.name in user_blacklist or ctx.command.name in guild_blacklist:
+            return False
+        return True
+
     async def setup_hook(self) -> None:
         await self.load_cogs()
         await self.database.test()
@@ -43,35 +65,13 @@ class KutangaBot(commands.Bot):
             await self.load_extension(f"cogs.{cog}")
 
 
-async def start_fastapi():
-    fast_config = uvicorn.Config(app, host="localhost", port=8000, log_level="info")
-    fast_server = uvicorn.Server(fast_config)
-    await fast_server.serve()
-
-
-async def start_bot(bot: KutangaBot):
-    await bot.start(os.getenv("TOKEN"))
-
-
-def setup(app: FastAPI, bot: KutangaBot) -> None:
-    router = APIRouter()
-    api_router = API_Router(app=app, bot=bot)
-    router.include_router(api_router.router)
-    app.include_router(router)
-
-
-async def main():
-    intents = discord.Intents.default()
-    intents.message_content = True
+def main():
+    intents = discord.Intents.all()
     bot = KutangaBot(
         intents=intents, command_prefix="n!", application_id=os.getenv("APPLICATION_ID")
     )
-    setup(app=app, bot=bot)
-    bot_task = asyncio.create_task(start_bot(bot=bot))
-    fastapi_task = asyncio.create_task(start_fastapi())
-
-    await asyncio.gather(bot_task, fastapi_task)
+    bot.run(os.getenv("TOKEN"))
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    main()

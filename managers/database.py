@@ -25,3 +25,11 @@ class Database:
                 message=f"Failed to connect to database {self.db.name}"
             )
             await self.logger.error(message=e)
+
+    async def get_user(self, user_id: int) -> dict:
+        docs = await self.db.users.find_one({"user_id": user_id})
+        return docs if docs is not None else {}
+
+    async def get_guild(self, guild_id: int) -> dict:
+        docs = await self.db.guilds.find_one({"guild_id": guild_id})
+        return docs if docs is not None else {}

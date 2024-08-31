@@ -183,3 +183,4 @@ poetry.toml
 pyrightconfig.json
 
 # End of https://www.toptal.com/developers/gitignore/api/python,dotenv
+/data/cah-cards-full.json

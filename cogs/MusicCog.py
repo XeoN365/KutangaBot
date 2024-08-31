@@ -21,7 +21,7 @@ class MusicCog(commands.Cog):
         await self.bot.tree.sync()
 
     @commands.hybrid_group(
-        name="music", invoke_without_command=True, with_app_command=True
+        name="music", invoke_without_command=True, with_app_command=True, aliases=["m"]
     )
     async def music(self, ctx: commands.Context):
         """Shows the music commands"""
@@ -136,8 +136,9 @@ class MusicCog(commands.Cog):
             embed = self.embed.create_embed("Autoplay is now off!", "Music Player")
             await ctx.send(embed=embed)
         else:
-            await self.logger.error(
-                ctx, message=f"{ctx.author.mention} Autoplay must be on or off!"
+            await self.logger.info(
+                ctx,
+                message=f"{ctx.author.mention} Autoplay is currently on {player.autoplay.name} mode!",
             )
 
     @music.command(name="shuffle")

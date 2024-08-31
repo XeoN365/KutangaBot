@@ -1,108 +1,110 @@
-import discord
 from discord.ext import commands
-import aiohttp
-import json
-import math
-import re
-from managers.logging import Logger
+from operator import itemgetter
+from typing import List
+
+from langchain_community.chat_models.ollama import ChatOllama
+
+from langchain_core.chat_history import BaseChatMessageHistory
+from langchain_core.documents import Document
+from langchain_core.messages import BaseMessage, AIMessage
+from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
+from langchain_core.pydantic_v1 import BaseModel, Field
+from langchain_core.runnables import (
+    RunnableLambda,
+    ConfigurableField,
+    RunnablePassthrough,
+)
+from langchain_core.runnables.history import RunnableWithMessageHistory
+
+from utils.embed import Embed
 from utils.reaction import Reaction
-from motor.motor_asyncio import AsyncIOMotorDatabase, AsyncIOMotorCollection
-from datetime import datetime, timedelta
-import os
+
+import math
+
+
+class InMemoryHistory(BaseChatMessageHistory, BaseModel):
+    """In memory chat history implementation"""
+
+    messages: List[BaseMessage] = Field(default_factory=list)
+
+    def add_messages(self, messages: List[BaseMessage]) -> None:
+        self.messages.extend(messages)
+
+    def clear(self) -> None:
+        self.messages = []
 
 
 class AiCog(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
-        self.logger: Logger = self.bot.logger
-        self.reaction: Reaction = Reaction()
-        self.db: AsyncIOMotorDatabase = self.bot.db["AiContext"]
+        self.llm = ChatOllama()
+        self.store = {}
+        self.embed = Embed()
+        self.reaction = Reaction()
+        self.prompt = ChatPromptTemplate.from_messages(
+            [
+                (
+                    "system",
+                    "You are an discord AI assistant. You will help users to the best of your ability with any question they may have. Make sure to format your answers discord friendly.",
+                ),
+                MessagesPlaceholder(variable_name="history"),
+                ("user", "{question}"),
+            ]
+        )
 
-    async def check_for_context(self, userid: int) -> AsyncIOMotorCollection:
-        return await self.db.find_one({"userid": userid})
+    def get_session_history(self, user_id: str) -> BaseChatMessageHistory:
+        if user_id not in self.store:
+            self.store[user_id] = InMemoryHistory()
+        return self.store[user_id]
 
-    async def append_context(self, userid: int, context):
-        date = datetime.now()
-        check = await self.check_for_context(userid=userid)
-        if check is not None:
-            query = {"userid": userid}
-            vals = {"$set": {"context": context, "date": date}}
-            await self.db.update_one(query, vals)
-        else:
-            await self.db.insert_one(
-                {
-                    "userid": userid,
-                    "context": context,
-                    "date": date,
-                }
-            )
+    async def get_response(self, user_id: str, prompt: str):
+
+        chain = self.prompt | ChatOllama(model="llama3.1")
+
+        runner = RunnableWithMessageHistory(
+            chain,  # type: ignore
+            get_session_history=self.get_session_history,
+            input_messages_key="question",
+            history_messages_key="history",
+        )
+
+        result = await runner.ainvoke(
+            {"question": prompt}, config={"configurable": {"session_id": user_id}}
+        )
+        return result
 
     @commands.command()
-    async def reset_context(self, ctx: commands.Context):
-        """Reset the context for a user."""
-        await self.append_context(userid=ctx.author.id, context=[])
-        embed = self.reaction.create_embed(
-            f"Context for {ctx.author.name} has been reset"
-        )
-        await ctx.send(embed=embed)
-
-    @commands.command(name="question", description="Ask a question")
-    async def ask_question(self, ctx: commands.Context, *, question: str):
+    async def ask(self, ctx, *, question: str):
         """Ask a question to the LLM."""
-        pattern = re.compile(r"<@[0-9]+>")
-        context = list()
-        if pattern.search(question):
-            user: discord.Member = ctx.guild.get_member(
-                int(pattern.search(question).group(0)[2:-1])
-            )
-            if user is not None:
-                question = question.replace(
-                    pattern.search(question).group(0), user.name
-                )
-        query = await self.check_for_context(userid=ctx.author.id)
-        if query is not None:
-            delta: timedelta = datetime.now() - query["date"]
-            if delta.seconds > 600:
-                context = []
-            else:
-                context = query["context"]
-
-        data = {
-            "model": "dolphin-llama3",
-            "prompt": f"{question}",
-            "system": "",
-            "stream": False,
-            "context": context,
-        }
-        data = json.dumps(data)
-        url = os.getenv("LLM_API_URL")
-        response = await make_async_post_request(url, data)
-        pages = math.ceil(len(response["response"]) / 1024)
+        response = await self.get_response(ctx.author.id, question)
+        pages = math.ceil(len(response.content) / 1024)
         if pages == 1:
-            await ctx.send(response["response"], ephemeral=True)
+            await ctx.send(response.content, ephemeral=True)
         else:
             for i in range(pages):
                 await ctx.send(
-                    response["response"][i * 1024 : (i + 1) * 1024], ephemeral=True
+                    response.content[i * 1024 : (i + 1) * 1024], ephemeral=True
                 )
-        await self.append_context(userid=ctx.author.id, context=response["context"])
+
+    @commands.command()
+    async def clear_history(self, ctx):
+        """Clear the chat history for the current user."""
+        if ctx.author.id in self.store:
+            del self.store[ctx.author.id]
+            await ctx.send("Chat history cleared.")
+        else:
+            await ctx.send("No chat history found for this user.")
 
     @commands.Cog.listener()
     async def on_message(self, message):
         if message.author == self.bot.user:
             return
-        elif message.content.startswith(f"<@{self.bot.user.id}>"):
+        if self.bot.user.mentioned_in(message):
             content = message.content.replace(f"<@{self.bot.user.id}>", "").strip()
             ctx = await self.bot.get_context(message)
             await self.reaction.add_reaction(ctx, "thinking")
-            await self.ask_question(ctx, question=content)
+            await self.ask(ctx, question=content)
 
 
-async def make_async_post_request(url, data):
-    async with aiohttp.ClientSession() as session:
-        async with session.post(url=url, data=data) as response:
-            return await response.json()
-
-
-async def setup(bot):
+async def setup(bot: commands.Bot):
     await bot.add_cog(AiCog(bot))
