@@ -1,23 +1,20 @@
 from discord.ext import commands
-from operator import itemgetter
+import discord
+
 from typing import List
 
 from langchain_community.chat_models.ollama import ChatOllama
 
 from langchain_core.chat_history import BaseChatMessageHistory
-from langchain_core.documents import Document
-from langchain_core.messages import BaseMessage, AIMessage
+from langchain_core.messages import BaseMessage
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.pydantic_v1 import BaseModel, Field
-from langchain_core.runnables import (
-    RunnableLambda,
-    ConfigurableField,
-    RunnablePassthrough,
-)
 from langchain_core.runnables.history import RunnableWithMessageHistory
 
 from utils.embed import Embed
 from utils.reaction import Reaction
+
+from datetime import datetime
 
 import math
 
@@ -45,19 +42,24 @@ class AiCog(commands.Cog):
             [
                 (
                     "system",
-                    "You are an discord AI assistant. You will help users to the best of your ability with any question they may have. Make sure to format your answers discord friendly.",
+                    f"""
+                    You are an discord AI assistant. 
+                    You will help users to the best of your ability with any question they may have. 
+                    Make sure to format your answers discord friendly. 
+                    Current date is {datetime.now().strftime('%d/%m/%Y')}.
+                    """,
                 ),
                 MessagesPlaceholder(variable_name="history"),
                 ("user", "{question}"),
             ]
         )
 
-    def get_session_history(self, user_id: str) -> BaseChatMessageHistory:
+    def get_session_history(self, user_id: int) -> BaseChatMessageHistory:
         if user_id not in self.store:
             self.store[user_id] = InMemoryHistory()
         return self.store[user_id]
 
-    async def get_response(self, user_id: str, prompt: str):
+    async def get_response(self, user_id: int, prompt: str):
 
         chain = self.prompt | ChatOllama(model="llama3.1")
 
@@ -74,7 +76,7 @@ class AiCog(commands.Cog):
         return result
 
     @commands.command()
-    async def ask(self, ctx, *, question: str):
+    async def ask(self, ctx: commands.Context, *, question: str):
         """Ask a question to the LLM."""
         response = await self.get_response(ctx.author.id, question)
         pages = math.ceil(len(response.content) / 1024)
@@ -96,11 +98,11 @@ class AiCog(commands.Cog):
             await ctx.send("No chat history found for this user.")
 
     @commands.Cog.listener()
-    async def on_message(self, message):
+    async def on_message(self, message: discord.Message):
         if message.author == self.bot.user:
             return
-        if self.bot.user.mentioned_in(message):
-            content = message.content.replace(f"<@{self.bot.user.id}>", "").strip()
+        if self.bot.user.mentioned_in(message):  # type: ignore
+            content = message.content.replace(f"<@{self.bot.user.id}>", "").strip()  # type: ignore
             ctx = await self.bot.get_context(message)
             await self.reaction.add_reaction(ctx, "thinking")
             await self.ask(ctx, question=content)
